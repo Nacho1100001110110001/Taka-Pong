@@ -98,3 +98,104 @@ app.post('/crearmesa', (req, res) => {
     mesas.push(nuevaMesa);
     res.status(201).json({ mensaje: 'Mesa creada exitosamente', mesa: nuevaMesa});
   });
+
+
+
+//******************segunda entrega*********************** */
+
+// Endpoint para modificar la información de una mesa según su id (PUT)
+app.put('/mesa/:id', (req, res) => {
+  const id = req.params.id;
+  const { nombre, tipo, accesorios } = req.body;
+
+  let mesa = mesas.find(mesa => mesa.id == id);
+  if (!mesa) {
+      return res.status(404).json({ error: 'Mesa no encontrada' });
+  }
+
+  if (nombre) mesa.nombre = nombre;
+  if (tipo) mesa.tipo = tipo;
+  if (accesorios) mesa.accesorios = accesorios;
+
+  res.json({ mensaje: 'Mesa modificada exitosamente', mesa });
+});
+
+// Endpoint para eliminar una mesa (DELETE)
+app.delete('/eliminarmesa/:id', (req, res) => {
+  const id = req.params.id;
+  const index = mesas.findIndex(mesa => mesa.id == id);
+
+  if (index === 0) {
+      return res.status(404).json({ error: 'Mesa no encontrada' });
+  }
+
+  mesas.splice(index, 1);
+  res.json({ mensaje: 'Mesa eliminada exitosamente' });
+});
+
+// Endpoint para reservar una mesa en un horario específico (POST)
+app.post('/mesa/:id/reserva/:horario', (req, res) => {
+  const { id, horario } = req.params;
+  const { usuarioId } = req.body;
+ 
+  const mesa = mesas.find(mesa => mesa.id == id);
+  if (!mesa) {
+      return res.status(404).json({ error: 'Mesa no encontrada' });
+  }
+
+  const horaReservada = mesa.horario.find(h => h.hora === horario);
+  if (!horaReservada) {
+      return res.status(404).json({ error: 'Horario no disponible' });
+  }
+  if (horaReservada.usuario) {
+      return res.status(400).json({ error: 'Horario ya reservado' });
+  }
+
+  const usuario = usuarios.find(u => u.id == usuarioId);
+  if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  horaReservada.usuario = usuarioId;
+  res.json({ mensaje: 'Mesa reservada exitosamente', mesa });
+});
+
+// Endpoint para modificar la información de un usuario según su id (PUT)
+app.put('/usuario/:id', (req, res) => {
+  const id = req.params.id;
+  const { nombre, correo, contrasena } = req.body;
+
+  let usuario = usuarios.find(u => u.id == id);
+  if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  // Actualizar solo los campos enviados
+  if (nombre) usuario.nombre = nombre;
+  if (correo) {
+      // Verificar que el correo no esté ya registrado por otro usuario
+      if (usuarios.find(u => u.correo.toLowerCase() == correo.toLowerCase() && u.id != id)) {
+          return res.status(400).json({ error: 'Correo ya registrado por otro usuario' });
+      }
+      usuario.correo = correo;
+  }
+  if (contrasena) usuario.contrasena = contrasena;
+
+  res.json({ mensaje: 'Usuario modificado exitosamente', usuario });
+});
+
+
+// Endpoint para eliminar una reserva en específico, con id de mesa
+app.delete('/reserva/:id', (req, res) => {
+  const { id } = req.params;
+  const mesa = mesas.find(mesa => mesa.horario.some(h => h.usuario == id));
+
+  if (!mesa) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+  }
+
+  const reserva = mesa.horario.find(h => h.usuario == id);
+  reserva.usuario = null;
+
+  res.json({ mensaje: 'Reserva eliminada exitosamente', mesa });
+});
